@@ -1,0 +1,132 @@
+# https://golangci-lint.run/usage/configuration/
+linters-settings:
+  mnd:
+    ignored-numbers:
+      - "0o666"
+      - "0o644"
+      - "0o600"
+      - "0o755"
+      - "0o750"
+      - "0o700"
+  depguard:
+    rules:
+      main:
+        files:
+          - $all
+          - "!$test"
+        deny:
+          - pkg: io/ioutil
+            desc: ioutil is deprecated starting with Go 1.16
+          - pkg: "github.com/pkg/errors"
+            desc: Should be replaced by standard lib errors package
+      test:
+        files:
+          - "$test"
+        deny:
+          - pkg: io/ioutil
+            desc: ioutil is deprecated starting with Go 1.16
+          - pkg: "github.com/pkg/errors"
+            desc: Should be replaced by standard lib errors package
+  errcheck:
+    check-type-assertions: true
+  exhaustive:
+    default-signifies-exhaustive: true
+  goconst:
+    min-len: 2
+    min-occurrences: 3
+  gocritic:
+    enabled-tags:
+      - diagnostic
+      - experimental
+      - opinionated
+      - performance
+      - style
+  nolintlint:
+    require-explanation: false
+    require-specific: true
+  tagliatelle:
+    case:
+      use-field-name: true
+      rules:
+        # Any struct tag type can be used.
+        # Support string case: `camel`, `pascal`, `kebab`, `snake`, `goCamel`, `goPascal`, `goKebab`, `goSnake`, `upper`, `lower`
+        json: camel
+        yaml: camel
+        xml: camel
+        bson: camel
+        avro: snake
+        mapstructure: camel
+        env: upperSnake
+
+issues:
+  exclude-rules:
+    - path: _test\.go # disable some linters on test files
+      linters:
+        - gocyclo
+        - gosec
+        - dupl
+
+    # Exclude some gocritic messages project-wide
+    - linters: [gocritic]
+      text: commentedOutCode
+
+    - linters: [gocritic]
+      text: whyNoLint
+
+    - linters: [gocritic]
+      text: unnecessaryBlock
+
+    - linters: [gocritic]
+      text: todoCommentWithoutDetail
+
+    - linters: [govet]
+      text: 'declaration of "(err|ctx)" shadows declaration at'
+
+  # "/" will be replaced by current OS file path separator to properly work on Windows.
+  exclude-dirs:
+    - .bingo
+    - .chglog
+    - .github
+    - .vscode
+    - bin
+    - build
+    - config
+    - deploy
+    - doc
+    - docs
+    - docker
+    - hot
+    - logs
+  # Enables exclude of directories:
+  # - vendor$, third_party$, testdata$, examples$, Godeps$, builtin$
+  exclude-dirs-use-default: true
+
+linters:
+  enable-all: true
+  disable:
+    - cyclop
+    - gochecknoglobals
+    - exhaustruct
+    - forbidigo
+    - funlen
+    - gci
+    - gochecknoinits
+    - gocognit
+    - godot
+    - godox
+    - err113
+    - ireturn
+    - lll
+    - paralleltest
+    - nlreturn
+    - nonamedreturns
+    - varnamelen
+    - wrapcheck
+    - wsl
+    # linters deprecated
+    - execinquery
+    - exportloopref
+    - gomnd
+
+run:
+  issues-exit-code: 1
