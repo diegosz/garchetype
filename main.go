@@ -27,8 +27,13 @@ import (
 var Version string
 
 const (
-	exeName   = "garchetype"
-	envPrefix = "GARCHETYPE"
+	exeName                 = "garchetype"
+	envPrefix               = "GARCHETYPE"
+	transformationPrefix    = "transformations-"
+	transformationExt       = "yaml"
+	defaultArchetypesFolder = "archetypes"
+	defaultTransformation   = "default"
+	defaultArchetype        = "hello-world"
 )
 
 var ErrSilentExit = errors.New("silent exit")
@@ -43,25 +48,23 @@ func main() {
 	os.Exit(0)
 }
 
-var (
-	ArchetypePrefix  = "transformations-"
-	ArchetypeExt     = "yaml"
-	DefaultArchetype = "default"
-)
-
 type Config struct {
-	Verbose     bool
-	FeatureName string
-	Archetype   string
-	SourceDir   string
+	Verbose          bool
+	FeatureName      string
+	ArchetypesFolder string
+	Archetype        string
+	Transformation   string
+	SourceDir        string
 }
 
 // newDefaultConfig returns a new default config with the default values set.
 func newDefaultConfig() *Config {
 	return &Config{
-		Verbose:   strings.ToLower(os.Getenv(envPrefix+"_VERBOSE")) == "true",
-		Archetype: cmp.Or(os.Getenv(envPrefix+"_ARCHETYPE"), DefaultArchetype),
-		SourceDir: os.Getenv(envPrefix + "_SOURCE_DIR"),
+		Verbose:          strings.ToLower(os.Getenv(envPrefix+"_VERBOSE")) == "true",
+		ArchetypesFolder: cmp.Or(os.Getenv(envPrefix+"_ARCHETYPES_FOLDER"), defaultArchetypesFolder),
+		Archetype:        cmp.Or(os.Getenv(envPrefix+"_ARCHETYPE"), defaultArchetype),
+		Transformation:   cmp.Or(os.Getenv(envPrefix+"_TRANSFORMATION"), defaultTransformation),
+		SourceDir:        os.Getenv(envPrefix + "_SOURCE_DIR"),
 	}
 }
 
@@ -88,6 +91,7 @@ func run(ctx context.Context, _ io.Reader, stdout, _ io.Writer, args []string) (
 	addCommand.Description = "Add a feature using an archetype."
 	addCommand.String(&cfg.FeatureName, "f", "feature", "Feature name to add.")
 	addCommand.String(&cfg.Archetype, "a", "archetype", "Archetype to use.")
+	addCommand.String(&cfg.Transformation, "t", "transformation", "Transformation to use.")
 	addCommand.String(&cfg.SourceDir, "s", "source-dir", "Source directory to use.")
 
 	listCommand := flaggy.NewSubcommand("list")
@@ -97,8 +101,11 @@ func run(ctx context.Context, _ io.Reader, stdout, _ io.Writer, args []string) (
 	flaggy.AttachSubcommand(addCommand, 1)
 	flaggy.AttachSubcommand(listCommand, 1)
 
-	// flaggy.Parse()
 	flaggy.ParseArgs(args[1:])
+
+	if cfg.SourceDir == "" { // HACK
+		cfg.SourceDir = "/home/diegos/_dev/exoar/xarchetype_godev_default"
+	}
 
 	switch {
 	case addCommand.Used:
@@ -122,7 +129,7 @@ func run(ctx context.Context, _ io.Reader, stdout, _ io.Writer, args []string) (
 		if err != nil {
 			return err
 		}
-		return listArchetypes(stdout, cfg)
+		return list(stdout, cfg)
 	default:
 		flaggy.ShowHelp("")
 		return nil
@@ -130,10 +137,33 @@ func run(ctx context.Context, _ io.Reader, stdout, _ io.Writer, args []string) (
 }
 
 func addFeature(_ context.Context, stdout io.Writer, cfg *Config, args ...string) error {
-	fmt.Fprintf(stdout, "🛠️  Adding '%s' feature using '%s' archetype.\n", cfg.FeatureName, cfg.Archetype)
-	a := getArchetypeFilename(cfg.Archetype)
-	fmt.Fprintf(stdout, "📦  Using archetype file: %s\n", a)
-	t := filepath.Join(cfg.SourceDir, a)
+	dest := "."
+	dest, err := filepath.Abs(dest)
+	if err != nil {
+		return err
+	}
+	asd, err := getArchetypesFolder(cfg.SourceDir, cfg.ArchetypesFolder)
+	if err != nil {
+		return err
+	}
+	ad, err := getArchetypeFolder(asd, cfg.Archetype)
+	if err != nil {
+		return err
+	}
+	tf, err := getTransformationFile(cfg.Transformation)
+	if err != nil {
+		return err
+	}
+	fmt.Fprintf(stdout, "🌱 Adding '%s' feature using '%s' archetype.\n", cfg.FeatureName, cfg.Archetype)
+	tf = filepath.Join(ad, tf)
+	fi, err := os.Stat(tf)
+	if err != nil {
+		return err
+	}
+	if fi.IsDir() {
+		return fmt.Errorf("invalid transformation file: %s", tf)
+	}
+	fmt.Fprintf(stdout, "📦 Using transformation file: %s\n", tf)
 	gs, err := gitstat.Get()
 	if err != nil {
 		return err
@@ -145,29 +175,114 @@ func addFeature(_ context.Context, stdout io.Writer, cfg *Config, args ...string
 	if err != nil {
 		return err
 	}
-	if err := generator.Generate(t, cfg.SourceDir, "destination", as, log.NewZeroLogger("info")); err != nil {
+	if err := generator.Generate(tf, ad, dest, as, log.NewZeroLogger("warn")); err != nil {
 		return err
 	}
-	fmt.Fprintf(stdout, "🎉  Feature '%s' added.\n", cfg.FeatureName)
+	fmt.Fprintf(stdout, "🎉 Feature '%s' added.\n", cfg.FeatureName)
 	return nil
 }
 
-func listArchetypes(stdout io.Writer, cfg *Config) error {
-	ts, err := getTransformations(cfg.SourceDir)
+func list(stdout io.Writer, cfg *Config) error {
+	ad, err := getArchetypesFolder(cfg.SourceDir, cfg.ArchetypesFolder)
 	if err != nil {
 		return err
 	}
-	for _, f := range ts {
-		fmt.Fprintf(stdout, "📦  %s\n", f)
+	as, err := getArchetypes(ad)
+	if err != nil {
+		return err
+	}
+	for _, a := range as {
+		ts, err := getTransformations(filepath.Join(ad, a))
+		if err != nil {
+			return err
+		}
+		if len(ts) == 0 {
+			continue
+		}
+		fmt.Fprintf(stdout, "📦 Archetype: %s\n", a)
+		if len(ts) == 1 && ts[0] == defaultTransformation {
+			continue
+		}
+		for _, t := range ts {
+			fmt.Fprintf(stdout, " 📄 Transformation: %s\n", t)
+		}
 	}
 	return nil
 }
 
-func getArchetypeFilename(archetype string) string {
-	return fmt.Sprintf("%s%s.%s", ArchetypePrefix, archetype, ArchetypeExt)
+func getArchetypesFolder(dir, archetypes string) (string, error) {
+	if dir == "" {
+		return "", errors.New("undefined dir")
+	}
+	if archetypes == "" {
+		return "", errors.New("undefined archetypes")
+	}
+	ad := filepath.Join(dir, archetypes)
+	fi, err := os.Stat(ad)
+	if err != nil {
+		return "", err
+	}
+	if !fi.IsDir() {
+		return "", fmt.Errorf("invalid archetypes folder: %s", ad)
+	}
+	return ad, nil
+}
+
+func getArchetypeFolder(dir, archetype string) (string, error) {
+	if dir == "" {
+		return "", errors.New("undefined dir")
+	}
+	if archetype == "" {
+		return "", errors.New("undefined archetype")
+	}
+	ad := filepath.Join(dir, archetype)
+	fi, err := os.Stat(ad)
+	if err != nil {
+		return "", err
+	}
+	if !fi.IsDir() {
+		return "", fmt.Errorf("invalid archetype folder: %s", ad)
+	}
+	return ad, nil
+}
+
+func getTransformationFile(transformation string) (string, error) {
+	if transformation == "" {
+		return "", errors.New("undefined transformation")
+	}
+	return fmt.Sprintf("%s%s.%s", transformationPrefix, transformation, transformationExt), nil
+}
+
+func getArchetypes(dir string) ([]string, error) {
+	if dir == "" {
+		return nil, errors.New("undefined dir")
+	}
+	var as []string
+	f, err := os.Open(dir)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+	entries, err := f.Readdirnames(-1)
+	if err != nil {
+		return nil, err
+	}
+	for _, f := range entries {
+		fi, err := os.Stat(filepath.Join(dir, f))
+		if err != nil {
+			return nil, err
+		}
+		if fi.IsDir() {
+			as = append(as, f)
+		}
+	}
+	return as, nil
 }
 
 func getTransformations(dir string) ([]string, error) {
+	if dir == "" {
+		return nil, errors.New("undefined dir")
+	}
 	var ts []string
 	f, err := os.Open(dir)
 	if err != nil {
@@ -179,8 +294,8 @@ func getTransformations(dir string) ([]string, error) {
 		return nil, err
 	}
 	for _, f := range entries {
-		if strings.HasPrefix(f, ArchetypePrefix) && strings.HasSuffix(f, ArchetypeExt) {
-			t := strings.TrimSuffix(strings.TrimPrefix(f, ArchetypePrefix), "."+ArchetypeExt)
+		if strings.HasPrefix(f, transformationPrefix) && strings.HasSuffix(f, transformationExt) {
+			t := strings.TrimSuffix(strings.TrimPrefix(f, transformationPrefix), "."+transformationExt)
 			ts = append(ts, t)
 		}
 	}
