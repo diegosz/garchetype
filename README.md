@@ -28,7 +28,10 @@ bingo get -l github.com/diegosz/garchetype@latest
 Add a feature using an archetype:
 
 ```shell
-./garchetype add -f <feature-name> -a <archetype-name>
+./garchetype add -f example-app -- --salutation 'Hi, punk!'
+🌱 Adding 'example-app' feature using 'hello-world' archetype.
+📦 Using transformation file: xarchetype_godev_default/archetypes/hello-world/transformations-default.yaml
+🎉 Feature 'example-app' added.
 ```
 
 ## TODO
