@@ -11,9 +11,9 @@ import (
 	"strings"
 
 	"github.com/diegosz/flaggy"
+	"github.com/diegosz/go-archetype/generator"
+	"github.com/diegosz/go-archetype/log"
 	"github.com/joho/godotenv"
-	"github.com/rantav/go-archetype/generator"
-	"github.com/rantav/go-archetype/log"
 	"go.uber.org/multierr"
 
 	// "github.com/gogs/git-module"
@@ -175,7 +175,7 @@ func addFeature(_ context.Context, stdout io.Writer, cfg *Config, args ...string
 	if err != nil {
 		return err
 	}
-	if err := generator.Generate(tf, ad, dest, as, log.NewZeroLogger("warn")); err != nil {
+	if err := generator.OverlayGenerate(tf, ad, dest, as, log.NewZeroLogger("warn")); err != nil {
 		return err
 	}
 	fmt.Fprintf(stdout, "🎉 Feature '%s' added.\n", cfg.FeatureName)
