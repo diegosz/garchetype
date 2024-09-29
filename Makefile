@@ -7,6 +7,14 @@ include .bingo/Variables.mk
 
 # --------------------------------------------------------------------------------------------------------------------------------
 
+.PHONY: toolsupdate
+
+toolsupdate:
+	@echo Updating tools
+	@$(BINGO) list | tail -n +3 | awk '{print $$1}' | xargs -tI % sh -c '$(BINGO) get -l %@latest'
+
+# --------------------------------------------------------------------------------------------------------------------------------
+
 .PHONY: version
 
 # similar to https://github.com/ahmetb/govvv
@@ -171,3 +179,24 @@ else
    rmdir = rmdir $(1) > /dev/null 2>&1 || true
    echo = echo "$(1)"
 endif
+
+# --------------------------------------------------------------------------------------------------------------------------------
+
+.PHONY: golint gotest gomodupdateall
+
+golint: $(GOLANGCI_LINT)
+	@$(GOLANGCI_LINT) run
+
+gotest:
+	go test -v ./...
+
+gomodupdateall:
+	go get -u ./...
+	go mod tidy
+
+# --------------------------------------------------------------------------------------------------------------------------------
+
+.PHONY: build
+
+build:
+	go build -ldflags "-s -w" -o build/garchetype main.go
