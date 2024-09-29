@@ -21,11 +21,6 @@ import (
 	"github.com/diegosz/garchetype/internal/gitstat"
 )
 
-// Version can be set at link time to override debug.BuildInfo.Main.Version,
-// which is "(devel)" when building from within the module. See
-// golang.org/issue/29814 and golang.org/issue/29228.
-var Version string
-
 const (
 	exeName                 = "garchetype"
 	envPrefix               = "GARCHETYPE"
@@ -102,10 +97,6 @@ func run(ctx context.Context, _ io.Reader, stdout, _ io.Writer, args []string) (
 	flaggy.AttachSubcommand(listCommand, 1)
 
 	flaggy.ParseArgs(args[1:])
-
-	if cfg.SourceDir == "" { // HACK
-		cfg.SourceDir = "/home/diegos/_dev/exoar/xarchetype_godev_default"
-	}
 
 	switch {
 	case addCommand.Used:
