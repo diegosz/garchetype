@@ -64,6 +64,14 @@ func newDefaultConfig() *Config {
 	}
 }
 
+var environment = []string{
+	envPrefix + "_ARCHETYPE",
+	envPrefix + "_ARCHETYPES_FOLDER",
+	envPrefix + "_ENV",
+	envPrefix + "_SOURCE_DIR",
+	envPrefix + "_SOURCE_REPO",
+	envPrefix + "_TRANSFORMATION",
+	envPrefix + "_VERBOSE",
 }
 
 func run(_ context.Context, stdout, _ io.Writer, args []string) (err error) {
@@ -97,8 +105,12 @@ func run(_ context.Context, stdout, _ io.Writer, args []string) (err error) {
 	listCommand.Description = "List available archetypes."
 	listCommand.String(&cfg.SourceDir, "s", "source-dir", "Source directory to use.")
 
+	environmentCommand := flaggy.NewSubcommand("environment")
+	environmentCommand.Hidden = true
+
 	flaggy.AttachSubcommand(addCommand, 1)
 	flaggy.AttachSubcommand(listCommand, 1)
+	flaggy.AttachSubcommand(environmentCommand, 1)
 
 	flaggy.ParseArgs(args[1:])
 
@@ -131,6 +143,11 @@ func run(_ context.Context, stdout, _ io.Writer, args []string) (err error) {
 			return err
 		}
 		return list(stdout, cfg)
+	case environmentCommand.Used:
+		for _, e := range environment {
+			fmt.Fprintf(stdout, "%s\n", e)
+		}
+		return nil
 	default:
 		flaggy.ShowHelp("")
 		return nil
