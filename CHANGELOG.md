@@ -1,6 +1,18 @@
 # CHANGELOG
 
 
+## v0.4.0 (2024-09-29)
+
+### Chore Tasks
+
+- update version to v0.4.0
+
+### Features
+
+- add environment command to list environment variables
+- add support for source repository and git operations
+
+
 ## v0.3.0 (2024-09-29)
 
 ### Chore Tasks
