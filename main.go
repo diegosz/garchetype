@@ -13,10 +13,9 @@ import (
 	"github.com/diegosz/flaggy"
 	"github.com/diegosz/go-archetype/generator"
 	"github.com/diegosz/go-archetype/log"
+	"github.com/gogs/git-module"
 	"github.com/joho/godotenv"
 	"go.uber.org/multierr"
-
-	// "github.com/gogs/git-module"
 
 	"github.com/diegosz/garchetype/internal/gitstat"
 )
@@ -34,7 +33,7 @@ const (
 var ErrSilentExit = errors.New("silent exit")
 
 func main() {
-	if err := run(context.Background(), os.Stdin, os.Stdout, os.Stderr, os.Args); err != nil {
+	if err := run(context.Background(), os.Stdout, os.Stderr, os.Args); err != nil {
 		if !errors.Is(err, ErrSilentExit) {
 			fmt.Fprintf(os.Stderr, "💥 %s error: %s\n", exeName, err)
 		}
@@ -50,6 +49,7 @@ type Config struct {
 	Archetype        string
 	Transformation   string
 	SourceDir        string
+	SourceRepo       string
 }
 
 // newDefaultConfig returns a new default config with the default values set.
@@ -60,10 +60,13 @@ func newDefaultConfig() *Config {
 		Archetype:        cmp.Or(os.Getenv(envPrefix+"_ARCHETYPE"), defaultArchetype),
 		Transformation:   cmp.Or(os.Getenv(envPrefix+"_TRANSFORMATION"), defaultTransformation),
 		SourceDir:        os.Getenv(envPrefix + "_SOURCE_DIR"),
+		SourceRepo:       os.Getenv(envPrefix + "_SOURCE_REPO"),
 	}
 }
 
-func run(ctx context.Context, _ io.Reader, stdout, _ io.Writer, args []string) (err error) {
+}
+
+func run(_ context.Context, stdout, _ io.Writer, args []string) (err error) {
 	// Try to read the default .env file in the current path into ENV for this
 	// process. It WILL NOT OVERRIDE an env variable that already exists -
 	// consider the .env file to set dev vars or sensible defaults.
@@ -88,6 +91,7 @@ func run(ctx context.Context, _ io.Reader, stdout, _ io.Writer, args []string) (
 	addCommand.String(&cfg.Archetype, "a", "archetype", "Archetype to use.")
 	addCommand.String(&cfg.Transformation, "t", "transformation", "Transformation to use.")
 	addCommand.String(&cfg.SourceDir, "s", "source-dir", "Source directory to use.")
+	addCommand.String(&cfg.SourceRepo, "r", "source-repo", "Source repository to use.")
 
 	listCommand := flaggy.NewSubcommand("list")
 	listCommand.Description = "List available archetypes."
@@ -100,6 +104,9 @@ func run(ctx context.Context, _ io.Reader, stdout, _ io.Writer, args []string) (
 
 	switch {
 	case addCommand.Used:
+		if err := setSource(cfg); err != nil {
+			return err
+		}
 		if cfg.FeatureName == "" {
 			err = multierr.Append(err, errors.New("feature name is required"))
 		}
@@ -112,8 +119,11 @@ func run(ctx context.Context, _ io.Reader, stdout, _ io.Writer, args []string) (
 		if err != nil {
 			return err
 		}
-		return addFeature(ctx, stdout, cfg, flaggy.TrailingArguments...)
+		return addFeature(stdout, cfg, flaggy.TrailingArguments...)
 	case listCommand.Used:
+		if err := setSource(cfg); err != nil {
+			return err
+		}
 		if cfg.SourceDir == "" {
 			err = multierr.Append(err, errors.New("source directory is required"))
 		}
@@ -127,7 +137,44 @@ func run(ctx context.Context, _ io.Reader, stdout, _ io.Writer, args []string) (
 	}
 }
 
-func addFeature(_ context.Context, stdout io.Writer, cfg *Config, args ...string) error {
+func setSource(cfg *Config) error {
+	if cfg.SourceDir == "" {
+		return errors.New("source directory is required")
+	}
+	g, err := git.Open(cfg.SourceDir)
+	switch err != nil {
+	case true:
+		if !errors.Is(err, os.ErrNotExist) {
+			return err
+		}
+		switch cfg.SourceRepo == "" {
+		case true:
+			return fmt.Errorf("source directory not found: %s", cfg.SourceDir)
+		default:
+			if err := git.Clone(cfg.SourceRepo, cfg.SourceDir); err != nil {
+				return err
+			}
+		}
+	default:
+		if _, err := g.RemoteGetURL("origin"); err == nil {
+			if err := g.Fetch(); err != nil {
+				return err
+			}
+			if err := g.Pull(); err != nil {
+				return err
+			}
+		} else {
+			e := err.Error()
+			if !strings.Contains(e, "not a git repository") &&
+				!strings.Contains(e, "No such remote") {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func addFeature(stdout io.Writer, cfg *Config, args ...string) error {
 	dest := "."
 	dest, err := filepath.Abs(dest)
 	if err != nil {
