@@ -1,6 +1,21 @@
 # CHANGELOG
 
 
+## v0.5.0 (2024-09-29)
+
+### Chore Tasks
+
+- update version to v0.5.0
+
+### Code Refactoring
+
+- update getFeatureArgs to use feature_name identifier
+
+### Documentation
+
+- clarify feature name argument as required in add command
+
+
 ## v0.4.0 (2024-09-29)
 
 ### Chore Tasks
