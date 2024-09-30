@@ -117,7 +117,7 @@ func run(_ context.Context, stdout, _ io.Writer, args []string) (err error) {
 
 	switch {
 	case addCommand.Used:
-		if err := setSource(cfg); err != nil {
+		if err := setSource(stdout, cfg); err != nil {
 			return err
 		}
 		if cfg.FeatureName == "" {
@@ -134,7 +134,7 @@ func run(_ context.Context, stdout, _ io.Writer, args []string) (err error) {
 		}
 		return addFeature(stdout, cfg, flaggy.TrailingArguments...)
 	case listCommand.Used:
-		if err := setSource(cfg); err != nil {
+		if err := setSource(stdout, cfg); err != nil {
 			return err
 		}
 		if cfg.SourceDir == "" {
@@ -155,7 +155,7 @@ func run(_ context.Context, stdout, _ io.Writer, args []string) (err error) {
 	}
 }
 
-func setSource(cfg *Config) error {
+func setSource(stdout io.Writer, cfg *Config) error {
 	if cfg.SourceDir == "" {
 		return errors.New("source directory is required")
 	}
@@ -170,13 +170,25 @@ func setSource(cfg *Config) error {
 			return fmt.Errorf("source directory not found: %s", cfg.SourceDir)
 		default:
 			if err := git.Clone(cfg.SourceRepo, cfg.SourceDir); err != nil {
-				return err
+				switch strings.Contains(err.Error(), "ssh: Could not resolve hostname") {
+				case true:
+					fmt.Fprintln(stdout, "🚨 Could not connect to remote repository.")
+					return fmt.Errorf("source directory not found: %s", cfg.SourceDir)
+				default:
+					return err
+				}
 			}
 		}
 	default:
 		if _, err := g.RemoteGetURL("origin"); err == nil {
 			if err := g.Fetch(); err != nil {
-				return err
+				switch strings.Contains(err.Error(), "ssh: Could not resolve hostname") {
+				case true:
+					fmt.Fprintln(stdout, "🚨 Could not connect to remote repository.")
+					return nil
+				default:
+					return err
+				}
 			}
 			if err := g.Pull(); err != nil {
 				return err
