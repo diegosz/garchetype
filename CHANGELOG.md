@@ -1,6 +1,17 @@
 # CHANGELOG
 
 
+## v0.6.0 (2024-09-29)
+
+### Chore Tasks
+
+- update version to v0.6.0
+
+### Features
+
+- handle connection errors
+
+
 ## v0.5.0 (2024-09-29)
 
 ### Chore Tasks
