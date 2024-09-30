@@ -96,7 +96,7 @@ func run(_ context.Context, stdout, _ io.Writer, args []string) (err error) {
 
 	addCommand := flaggy.NewSubcommand("add")
 	addCommand.Description = "Add a feature using an archetype."
-	addCommand.String(&cfg.FeatureName, "f", "feature", "Feature name to add.")
+	addCommand.String(&cfg.FeatureName, "f", "feature", "Feature name to add (required).")
 	addCommand.String(&cfg.Archetype, "a", "archetype", "Archetype to use.")
 	addCommand.String(&cfg.Transformation, "t", "transformation", "Transformation to use.")
 	addCommand.String(&cfg.SourceDir, "s", "source-dir", "Source directory to use.")
