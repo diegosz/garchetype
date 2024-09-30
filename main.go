@@ -28,6 +28,7 @@ const (
 	defaultArchetypesFolder = "archetypes"
 	defaultTransformation   = "default"
 	defaultArchetype        = "hello-world"
+	featureNameID           = "feature_name"
 )
 
 var ErrSilentExit = errors.New("silent exit")
@@ -357,21 +358,21 @@ func getTransformations(dir string) ([]string, error) {
 	return ts, nil
 }
 
-func getFeatureArgs(name string, args []string) ([]string, error) {
-	if name == "" {
+func getFeatureArgs(featureName string, args []string) ([]string, error) {
+	if featureName == "" {
 		return nil, errors.New("feature name is required")
 	}
-	as := []string{"--name", name}
+	as := []string{"--" + featureNameID, featureName}
 	var removeNext bool
 	for _, a := range args {
 		switch {
 		case removeNext:
 			removeNext = false
 			continue
-		case a == "--name":
+		case a == "--"+featureNameID:
 			removeNext = true
 			continue
-		case strings.HasPrefix(a, "--name="):
+		case strings.HasPrefix(a, "--"+featureNameID+"="):
 			continue
 		default:
 			as = append(as, a)
