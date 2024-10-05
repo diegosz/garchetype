@@ -1,6 +1,13 @@
 # CHANGELOG
 
 
+## v0.6.1 (2024-10-04)
+
+### Features
+
+- add check for presence of go.mod file before executing add command
+
+
 ## v0.6.0 (2024-09-29)
 
 ### Chore Tasks
