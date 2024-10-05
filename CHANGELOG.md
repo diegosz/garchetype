@@ -1,6 +1,13 @@
 # CHANGELOG
 
 
+## v0.7.0 (2024-10-04)
+
+### Chore Tasks
+
+- update version to v0.7.0
+
+
 ## v0.6.1 (2024-10-04)
 
 ### Features
