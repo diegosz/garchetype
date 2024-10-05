@@ -117,6 +117,9 @@ func run(_ context.Context, stdout, _ io.Writer, args []string) (err error) {
 
 	switch {
 	case addCommand.Used:
+		if _, err := os.Stat("go.mod"); os.IsNotExist(err) {
+			return errors.New("go.mod file not found in the current folder")
+		}
 		if err := setSource(stdout, cfg); err != nil {
 			return err
 		}
