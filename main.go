@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"cmp"
 	"context"
 	"errors"
@@ -96,7 +97,7 @@ func run(_ context.Context, stdout, _ io.Writer, args []string) (err error) {
 
 	addCommand := flaggy.NewSubcommand("add")
 	addCommand.Description = "Add a feature using an archetype."
-	addCommand.String(&cfg.FeatureName, "f", "feature", "Feature name to add (required).")
+	addCommand.String(&cfg.FeatureName, "f", "feature", "Feature name to add.")
 	addCommand.String(&cfg.Archetype, "a", "archetype", "Archetype to use.")
 	addCommand.String(&cfg.Transformation, "t", "transformation", "Transformation to use.")
 	addCommand.String(&cfg.SourceDir, "s", "source-dir", "Source directory to use.")
@@ -123,11 +124,11 @@ func run(_ context.Context, stdout, _ io.Writer, args []string) (err error) {
 		if err := setSource(stdout, cfg); err != nil {
 			return err
 		}
-		if cfg.FeatureName == "" {
-			err = multierr.Append(err, errors.New("feature name is required"))
-		}
 		if cfg.Archetype == "" {
 			err = multierr.Append(err, errors.New("archetype is required"))
+		}
+		if cfg.FeatureName == "" {
+			cfg.FeatureName = cfg.Archetype
 		}
 		if cfg.SourceDir == "" {
 			err = multierr.Append(err, errors.New("source directory is required"))
@@ -242,11 +243,15 @@ func addFeature(stdout io.Writer, cfg *Config, args ...string) error {
 	if gs.Dirty {
 		return errors.New("git repository is dirty")
 	}
-	as, err := getFeatureArgs(cfg.FeatureName, args)
+	var fn string
+	b, err := os.ReadFile(tf)
 	if err != nil {
 		return err
 	}
-	if err := generator.OverlayGenerate(tf, ad, dest, as, log.NewZeroLogger("warn")); err != nil {
+	if bytes.Contains(b, []byte("- id: feature_name")) {
+		fn = cfg.FeatureName
+	}
+	if err := generator.OverlayGenerate(tf, ad, dest, getFeatureArgs(fn, args), log.NewZeroLogger("warn")); err != nil {
 		return err
 	}
 	fmt.Fprintf(stdout, "🎉 Feature '%s' added.\n", cfg.FeatureName)
@@ -373,11 +378,11 @@ func getTransformations(dir string) ([]string, error) {
 	return ts, nil
 }
 
-func getFeatureArgs(featureName string, args []string) ([]string, error) {
-	if featureName == "" {
-		return nil, errors.New("feature name is required")
+func getFeatureArgs(featureName string, args []string) []string {
+	as := []string{}
+	if featureName != "" {
+		as = append(as, []string{"--" + featureNameID, featureName}...)
 	}
-	as := []string{"--" + featureNameID, featureName}
 	var removeNext bool
 	for _, a := range args {
 		switch {
@@ -393,5 +398,5 @@ func getFeatureArgs(featureName string, args []string) ([]string, error) {
 			as = append(as, a)
 		}
 	}
-	return as, nil
+	return as
 }
