@@ -1,6 +1,13 @@
 # CHANGELOG
 
 
+## v0.7.1 (2024-10-10)
+
+### Features
+
+- make feature name optional in add command
+
+
 ## v0.7.0 (2024-10-04)
 
 ### Chore Tasks
