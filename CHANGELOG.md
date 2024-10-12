@@ -1,6 +1,13 @@
 # CHANGELOG
 
 
+## v0.11.0 (2024-10-12)
+
+### Features
+
+- optimize git clone with depth 1 and main branch only
+
+
 ## v0.10.0 (2024-10-12)
 
 ### Features
