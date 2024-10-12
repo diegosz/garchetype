@@ -180,7 +180,10 @@ func setSource(stdout io.Writer, cfg *Config) error {
 		case true:
 			return fmt.Errorf("source directory not found: %s", cfg.SourceDir)
 		default:
-			if err := git.Clone(cfg.SourceRepo, cfg.SourceDir); err != nil {
+			if err := git.Clone(
+				cfg.SourceRepo, cfg.SourceDir,
+				git.CloneOptions{Depth: 1, Branch: "main"}, // Speed up the clone.
+			); err != nil {
 				switch strings.Contains(err.Error(), "ssh: Could not resolve hostname") {
 				case true:
 					fmt.Fprintln(stdout, "🚨 Could not connect to remote repository.")
