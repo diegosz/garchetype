@@ -1,6 +1,13 @@
 # CHANGELOG
 
 
+## v0.9.0 (2024-10-12)
+
+### Features
+
+- add noyes prompter support
+
+
 ## v0.8.0 (2024-10-10)
 
 ### Chore Tasks
