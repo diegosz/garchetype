@@ -1,6 +1,13 @@
 # CHANGELOG
 
 
+## v0.10.0 (2024-10-12)
+
+### Features
+
+- add force flag for adding on a dirty repo
+
+
 ## v0.9.0 (2024-10-12)
 
 ### Features
