@@ -8,7 +8,7 @@ require (
 )
 
 require (
-	github.com/diegosz/go-archetype v0.1.17000001017002
+	github.com/diegosz/go-archetype v0.1.17000001017003
 	github.com/gogs/git-module v1.8.3
 	go.uber.org/multierr v1.11.0
 )
@@ -33,9 +33,9 @@ require (
 	github.com/shopspring/decimal v1.4.0 // indirect
 	github.com/spf13/cast v1.7.0 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
-	golang.org/x/crypto v0.27.0 // indirect
-	golang.org/x/sys v0.25.0 // indirect
-	golang.org/x/term v0.24.0 // indirect
-	golang.org/x/text v0.18.0 // indirect
+	golang.org/x/crypto v0.28.0 // indirect
+	golang.org/x/sys v0.26.0 // indirect
+	golang.org/x/term v0.25.0 // indirect
+	golang.org/x/text v0.19.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 )
