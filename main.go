@@ -45,7 +45,7 @@ func main() {
 }
 
 type Config struct {
-	Verbose          bool
+	Force            bool
 	FeatureName      string
 	ArchetypesFolder string
 	Archetype        string
@@ -56,8 +56,14 @@ type Config struct {
 
 // newDefaultConfig returns a new default config with the default values set.
 func newDefaultConfig() *Config {
+	var force bool
+	switch strings.ToLower(os.Getenv(envPrefix + "_VERBOSE")) {
+	case "yes", "ok", "t", "true":
+		force = true
+	default:
+	}
 	return &Config{
-		Verbose:          strings.ToLower(os.Getenv(envPrefix+"_VERBOSE")) == "true",
+		Force:            force,
 		ArchetypesFolder: cmp.Or(os.Getenv(envPrefix+"_ARCHETYPES_FOLDER"), defaultArchetypesFolder),
 		Archetype:        cmp.Or(os.Getenv(envPrefix+"_ARCHETYPE"), defaultArchetype),
 		Transformation:   cmp.Or(os.Getenv(envPrefix+"_TRANSFORMATION"), defaultTransformation),
@@ -73,7 +79,7 @@ var environment = []string{
 	envPrefix + "_SOURCE_DIR",
 	envPrefix + "_SOURCE_REPO",
 	envPrefix + "_TRANSFORMATION",
-	envPrefix + "_VERBOSE",
+	envPrefix + "_FORCE",
 }
 
 func run(_ context.Context, stdout, _ io.Writer, args []string) (err error) {
@@ -97,6 +103,7 @@ func run(_ context.Context, stdout, _ io.Writer, args []string) (err error) {
 
 	addCommand := flaggy.NewSubcommand("add")
 	addCommand.Description = "Add a feature using an archetype."
+	addCommand.Bool(&cfg.Force, "", "force", "Force adding on a dirty repo.")
 	addCommand.String(&cfg.FeatureName, "f", "feature", "Feature name to add.")
 	addCommand.String(&cfg.Archetype, "a", "archetype", "Archetype to use.")
 	addCommand.String(&cfg.Transformation, "t", "transformation", "Transformation to use.")
@@ -240,7 +247,7 @@ func addFeature(stdout io.Writer, cfg *Config, args ...string) error {
 	if err != nil {
 		return err
 	}
-	if gs.Dirty {
+	if gs.Dirty && !cfg.Force {
 		return errors.New("git repository is dirty")
 	}
 	var fn string
