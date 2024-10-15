@@ -1,6 +1,13 @@
 # CHANGELOG
 
 
+## v0.12.0 (2024-10-15)
+
+### Features
+
+- add gomod_name support
+
+
 ## v0.11.0 (2024-10-12)
 
 ### Features
