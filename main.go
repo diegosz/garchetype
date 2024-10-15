@@ -17,6 +17,7 @@ import (
 	"github.com/gogs/git-module"
 	"github.com/joho/godotenv"
 	"go.uber.org/multierr"
+	"golang.org/x/mod/modfile"
 
 	"github.com/diegosz/garchetype/internal/gitstat"
 )
@@ -30,6 +31,7 @@ const (
 	defaultTransformation   = "default"
 	defaultArchetype        = "hello-world"
 	featureNameID           = "feature_name"
+	goModNameID             = "gomod_name"
 )
 
 var ErrSilentExit = errors.New("silent exit")
@@ -253,15 +255,11 @@ func addFeature(stdout io.Writer, cfg *Config, args ...string) error {
 	if gs.Dirty && !cfg.Force {
 		return errors.New("git repository is dirty")
 	}
-	var fn string
 	b, err := os.ReadFile(tf)
 	if err != nil {
 		return err
 	}
-	if bytes.Contains(b, []byte("- id: feature_name")) {
-		fn = cfg.FeatureName
-	}
-	if err := generator.OverlayGenerate(tf, ad, dest, getFeatureArgs(fn, args), log.NewZeroLogger("warn")); err != nil {
+	if err := generator.OverlayGenerate(tf, ad, dest, getFeatureArgs(b, cfg, args), log.NewZeroLogger("warn")); err != nil {
 		return err
 	}
 	fmt.Fprintf(stdout, "🎉 Feature '%s' added.\n", cfg.FeatureName)
@@ -388,10 +386,24 @@ func getTransformations(dir string) ([]string, error) {
 	return ts, nil
 }
 
-func getFeatureArgs(featureName string, args []string) []string {
+func getFeatureArgs(transformation []byte, cfg *Config, args []string) []string {
+	var fn string
+	if bytes.Contains(transformation, []byte("- id: "+featureNameID)) {
+		fn = cfg.FeatureName
+	}
+	var mod string
+	if bytes.Contains(transformation, []byte("- id: "+goModNameID)) {
+		goModBytes, err := os.ReadFile("go.mod")
+		if err == nil {
+			mod = modfile.ModulePath(goModBytes)
+		}
+	}
 	as := []string{}
-	if featureName != "" {
-		as = append(as, []string{"--" + featureNameID, featureName}...)
+	if fn != "" {
+		as = append(as, []string{"--" + featureNameID, fn}...)
+	}
+	if mod != "" {
+		as = append(as, []string{"--" + goModNameID, mod}...)
 	}
 	var removeNext bool
 	for _, a := range args {
@@ -399,10 +411,10 @@ func getFeatureArgs(featureName string, args []string) []string {
 		case removeNext:
 			removeNext = false
 			continue
-		case a == "--"+featureNameID:
+		case a == "--"+featureNameID, a == "--"+goModNameID:
 			removeNext = true
 			continue
-		case strings.HasPrefix(a, "--"+featureNameID+"="):
+		case strings.HasPrefix(a, "--"+featureNameID+"="), strings.HasPrefix(a, "--"+goModNameID+"="):
 			continue
 		default:
 			as = append(as, a)

@@ -8,9 +8,10 @@ require (
 )
 
 require (
-	github.com/diegosz/go-archetype v0.1.17000001017003
+	github.com/diegosz/go-archetype v0.1.17000001017004
 	github.com/gogs/git-module v1.8.3
 	go.uber.org/multierr v1.11.0
+	golang.org/x/mod v0.21.0
 )
 
 require (
